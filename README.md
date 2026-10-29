@@ -46,11 +46,13 @@ transactions are grouped by date into `PARTNER_PAYOUT_SCHEDULE` periods
    ```bash
    php artisan partner:sync --full
    ```
-6. Cron, every minute:
+6. Cron, every minute. In hPanel (Advanced → Cron Jobs, type PHP) point it at
+   `cron.php` in the site root, e.g. `domains/<subdomain>/public_html/cron.php`.
+   Anywhere with a normal crontab:
    ```
    * * * * * cd /path/to/partner_dashboard && php artisan schedule:run >> /dev/null 2>&1
    ```
-   This runs an incremental `partner:sync` every hour.
+   Either way, this runs an incremental `partner:sync` every hour.
 
 ## Hosting (same setup as agency_dashboard)
 
