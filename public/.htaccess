@@ -1,0 +1,38 @@
+# Explicit on purpose — this specific host's default DirectoryIndex
+# doesn't include index.php, so a bare "/" (a real directory, unlike
+# "/login" etc.) skipped the rewrite rule below entirely and Apache
+# served a raw 403 instead of falling through to index.php.
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Route the bare root straight to index.php, unconditionally. This
+    # host doesn't honor DirectoryIndex from .htaccess (confirmed: "/"
+    # still 403'd after declaring it explicitly), and the rule below
+    # never fires for "/" on its own — the doc root IS a directory, so
+    # its "!-d" condition fails before ever reaching index.php.
+    RewriteRule ^$ index.php [L]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
