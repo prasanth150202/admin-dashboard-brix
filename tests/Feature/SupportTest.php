@@ -196,6 +196,42 @@ class SupportTest extends TestCase
         $this->assertSame(2, Setup::count());
     }
 
+    public function test_new_setup_form(): void
+    {
+        $this->partnerApp->setupSteps()->create(['title' => 'Enable embed', 'position' => 1]);
+        $sales = User::factory()->create(['role' => 'sales']);
+        $agent = User::factory()->team()->create();
+        $this->actingAs($sales);
+
+        $this->get(route('setups.index'))->assertOk()->assertSee('New setup');
+        $this->get(route('setups.create', ['shop' => $this->shop->id]))->assertOk()->assertSee('cool-shop.myshopify.com')->assertSee('1 step');
+
+        // An existing store, assigned to a teammate.
+        $this->post(route('setups.store'), [
+            'shop_domain' => 'cool-shop', 'partner_app_id' => $this->partnerApp->id,
+            'assignee_id' => $agent->id, 'due_on' => '2026-11-20', 'notes' => 'Bought the Pro plan',
+        ])->assertRedirect();
+        $setup = Setup::sole();
+        $this->assertSame($this->shop->id, $setup->shop_id);
+        $this->assertSame($agent->id, $setup->assignee_id);
+        $this->assertSame($sales->id, $setup->assigned_by);
+        $this->assertSame('2026-11-20', $setup->due_on->toDateString());
+        $this->assertSame(1, $setup->tasks()->count());
+
+        // Same store and app again goes to the existing setup.
+        $this->post(route('setups.store'), ['shop_domain' => 'cool-shop.myshopify.com', 'partner_app_id' => $this->partnerApp->id, 'assignee_id' => ''])
+            ->assertRedirect(route('setups.show', $setup));
+        $this->assertSame(1, Setup::count());
+
+        // A brand that hasn't installed yet; left unassigned.
+        $this->post(route('setups.store'), ['shop_domain' => 'https://New-Brand.myshopify.com', 'partner_app_id' => $this->partnerApp->id, 'assignee_id' => ''])->assertRedirect();
+        $new = Setup::latest('id')->first();
+        $this->assertSame('new-brand.myshopify.com', $new->shop->myshopify_domain);
+        $this->assertNull($new->assignee_id);
+
+        $this->post(route('setups.store'), ['shop_domain' => 'not a domain!', 'partner_app_id' => $this->partnerApp->id])->assertSessionHasErrors('shop_domain');
+    }
+
     public function test_pages_render(): void
     {
         $admin = User::factory()->create();

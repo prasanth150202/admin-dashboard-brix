@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{ticket}/reply', [TicketsController::class, 'reply'])->name('tickets.reply');
 
     Route::get('/setups', [SetupsController::class, 'index'])->name('setups.index');
+    Route::get('/setups/new', [SetupsController::class, 'create'])->name('setups.create');
     Route::post('/setups', [SetupsController::class, 'store'])->name('setups.store');
     Route::get('/setups/{setup}', [SetupsController::class, 'show'])->name('setups.show');
     Route::patch('/setups/{setup}', [SetupsController::class, 'update'])->name('setups.update');

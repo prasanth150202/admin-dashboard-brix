@@ -8,9 +8,11 @@ use App\Models\SetupTask;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Support\SetupPlanner;
+use App\Services\Support\TicketIntake;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SetupsController extends Controller
 {
@@ -48,20 +50,64 @@ class SetupsController extends Controller
         ]);
     }
 
-    /** Starts a setup by hand from a store page (e.g. an older install, or a test store). */
+    public function create(Request $request)
+    {
+        return view('setups.create', [
+            'apps' => PartnerApp::withCount('setupSteps')->orderBy('name')->get(),
+            'users' => User::orderBy('name')->get(),
+            'domains' => Shop::orderBy('myshopify_domain')->limit(1000)->pluck('myshopify_domain'),
+            'shop' => $request->integer('shop') ? Shop::find($request->integer('shop')) : null,
+        ]);
+    }
+
+    /**
+     * Starts a setup by hand: from the New setup form (any store, even one
+     * that hasn't installed yet) or the Start setup button on a store page.
+     */
     public function store(Request $request, SetupPlanner $planner)
     {
         $data = $request->validate([
-            'shop_id' => ['required', 'integer', 'exists:shops,id'],
+            'shop_id' => ['required_without:shop_domain', 'nullable', 'integer', 'exists:shops,id'],
+            'shop_domain' => ['required_without:shop_id', 'nullable', 'string', 'max:190'],
             'partner_app_id' => ['required', 'integer', 'exists:partner_apps,id'],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'due_on' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:10000'],
         ]);
 
-        $setup = $planner->start(Shop::findOrFail($data['shop_id']), PartnerApp::findOrFail($data['partner_app_id']));
-        if (! $setup->assignee_id) {
-            $setup->assignTo($request->user()->id, $request->user())->save();
+        $shop = $this->resolveShop($data);
+        $setup = $planner->start($shop, PartnerApp::findOrFail($data['partner_app_id']));
+
+        if (! $setup->wasRecentlyCreated) {
+            return redirect()->route('setups.show', $setup)->with('status', "{$shop->displayName()} already has a {$setup->app->name} setup — here it is.");
         }
 
-        return redirect()->route('setups.show', $setup)->with('status', 'Setup started.');
+        // The form says who it's for; the store-page button assigns it to whoever clicked.
+        $assignee = $request->has('assignee_id')
+            ? (isset($data['assignee_id']) ? (int) $data['assignee_id'] : null)
+            : $request->user()->id;
+
+        $setup->assignTo($assignee, $request->user())
+            ->fill(collect($data)->only(['due_on', 'notes'])->all())
+            ->save();
+
+        return redirect()->route('setups.show', $setup)->with('status', 'Setup created.');
+    }
+
+    /** A synced store by ID, or by domain — creating it if it hasn't installed yet. */
+    private function resolveShop(array $data): Shop
+    {
+        if (! empty($data['shop_id'])) {
+            return Shop::findOrFail($data['shop_id']);
+        }
+
+        $domain = TicketIntake::normalizeDomain($data['shop_domain']);
+
+        if ($domain === null) {
+            throw ValidationException::withMessages(['shop_domain' => 'Enter a store domain like cool-shop.myshopify.com.']);
+        }
+
+        return Shop::firstOrCreate(['myshopify_domain' => $domain]);
     }
 
     public function show(Setup $setup)

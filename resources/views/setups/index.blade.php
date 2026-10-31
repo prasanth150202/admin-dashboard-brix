@@ -1,7 +1,10 @@
 <x-layout title="Setups">
-    <div>
-        <h1 class="text-xl font-semibold">Setups</h1>
-        <p class="mt-1 text-sm text-ink-2">{{ number_format($setups->total()) }} {{ Str::plural('setup', $setups->total()) }} · started automatically when a store installs an app, using that app's checklist</p>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-semibold">Setups</h1>
+            <p class="mt-1 text-sm text-ink-2">{{ number_format($setups->total()) }} {{ Str::plural('setup', $setups->total()) }} · started automatically when a store installs an app, or by hand</p>
+        </div>
+        <a href="{{ route('setups.create') }}" class="btn btn-primary">New setup</a>
     </div>
 
     <form method="GET" class="mt-5 flex flex-wrap items-center gap-2">
