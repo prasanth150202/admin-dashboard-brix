@@ -6,17 +6,18 @@
 @source '../**/*.js';
 
 /* Chart and UI tokens — values from the validated reference palette.
-   Light by default; dark follows the OS unless data-theme pins it. */
+   Light by default: a cool grey page with white cards. Every page shell
+   pins data-theme="light"; drop that attribute to follow the OS again. */
 :root {
     color-scheme: light;
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --surface-2: #f3f2ee;
+    --page: #f1f3f5;
+    --surface: #ffffff;
+    --surface-2: #eceef1;
     --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --line: #e1e0d9;
-    --axis: #c3c2b7;
+    --ink-2: #4b5059;
+    --muted: #80858f;
+    --line: #e2e5e9;
+    --axis: #c6cad1;
     --accent: #2a78d6;
     --accent-ink: #ffffff;
     --series-1: #2a78d6;

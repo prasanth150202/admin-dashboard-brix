@@ -78,6 +78,59 @@
         </div>
     </section>
 
+    <section id="api-keys" class="card mt-4 p-4">
+        <h2 class="font-semibold">API keys</h2>
+        <p class="mt-1 text-sm text-ink-2">
+            For the chatbot and anything else that calls the REST API at <code>{{ url('/api') }}</code>.
+            Send the key as <code>Authorization: Bearer &lt;key&gt;</code>. Make one key per tool, so you can revoke one without breaking the others.
+        </p>
+
+        @if ($new = session('new_api_key'))
+            <div class="mt-4 rounded-lg border p-3" style="border-color: var(--good); background: var(--surface-2)" x-data="{ copied: false }">
+                <p class="text-sm font-medium">New key “{{ $new['name'] }}” — copy it now. It won't be shown again.</p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <code class="field num flex-1 select-all break-all" x-ref="key">{{ $new['token'] }}</code>
+                    <button type="button" class="btn" x-on:click="navigator.clipboard.writeText($refs.key.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)">
+                        <span x-text="copied ? 'Copied' : 'Copy'">Copy</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('settings.api-keys.store') }}" class="mt-4 flex flex-wrap items-start gap-2">
+            @csrf
+            <div>
+                <input name="name" value="{{ old('name') }}" placeholder="Name, e.g. Website chatbot" maxlength="120" required class="field w-64" aria-label="Key name">
+                @error('name')<p class="mt-1 text-sm" style="color: var(--critical)">{{ $message }}</p>@enderror
+            </div>
+            <button class="btn btn-primary">Create key</button>
+        </form>
+
+        <div class="mt-4 overflow-x-auto">
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Key</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+                <tbody>
+                @forelse ($apiKeys as $key)
+                    <tr>
+                        <td class="font-medium">{{ $key->name }}</td>
+                        <td class="num text-ink-2">{{ $key->prefix }}…</td>
+                        <td class="whitespace-nowrap">{{ short_date($key->created_at) }}@if ($key->creator)<span class="text-xs text-muted"> · {{ $key->creator->name }}</span>@endif</td>
+                        <td class="whitespace-nowrap">{{ $key->last_used_at?->diffForHumans() ?? 'Never' }}</td>
+                        <td class="text-right">
+                            <form method="POST" action="{{ route('settings.api-keys.destroy', $key) }}" onsubmit="return confirm(@js('Revoke “'.$key->name.'”? Anything using it stops working immediately.'))">
+                                @csrf @method('DELETE')
+                                <button class="text-sm text-ink-2 hover:text-ink">Revoke</button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="text-ink-2">No keys yet.@if (config('support.api_token')) The <code>SUPPORT_API_TOKEN</code> in .env also works.@endif</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="card mt-4 p-4">
         <h2 class="font-semibold">Recent syncs</h2>
         <div class="mt-3 overflow-x-auto">

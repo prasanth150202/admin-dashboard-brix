@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApiKey;
 use App\Models\PartnerApp;
 use App\Models\SyncRun;
 use App\Services\Partner\PartnerApiException;
@@ -22,7 +23,26 @@ class SettingsController extends Controller
             'apiVersion' => config('partner.api_version'),
             'schedule' => config('partner.payout_schedule'),
             'backfillFrom' => config('partner.backfill_from'),
+            'apiKeys' => ApiKey::with('creator')->latest('id')->get(),
         ]);
+    }
+
+    /** The plain key is flashed once for display; only its hash is stored. */
+    public function storeApiKey(Request $request)
+    {
+        $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
+
+        [$key, $token] = ApiKey::generate($data['name'], $request->user());
+
+        return redirect()->to(route('settings').'#api-keys')
+            ->with('new_api_key', ['name' => $key->name, 'token' => $token]);
+    }
+
+    public function destroyApiKey(ApiKey $key)
+    {
+        $key->delete();
+
+        return redirect()->to(route('settings').'#api-keys')->with('status', "Revoked the “{$key->name}” key. Anything using it is now locked out.");
     }
 
     /** Adds an app by its Partner app ID, confirming it exists in the org first. */

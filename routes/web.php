@@ -72,5 +72,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/settings/apps/{app}', [SettingsController::class, 'destroyApp'])->name('settings.apps.destroy');
         Route::post('/settings/test', [SettingsController::class, 'test'])->name('settings.test');
         Route::post('/settings/sync', [SettingsController::class, 'sync'])->name('settings.sync');
+        Route::post('/settings/api-keys', [SettingsController::class, 'storeApiKey'])->name('settings.api-keys.store');
+        Route::delete('/settings/api-keys/{key}', [SettingsController::class, 'destroyApiKey'])->name('settings.api-keys.destroy');
     });
 });

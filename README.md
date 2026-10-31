@@ -36,7 +36,7 @@ transactions are grouped by date into `PARTNER_PAYOUT_SCHEDULE` periods
 | Team | **Tickets → New ticket**, for requests that came by phone, WhatsApp, etc. |
 | Support form | Public page at `/support`. Link to it from each app as `/support?app=<Partner app ID>&shop=<shop>.myshopify.com` to prefill both. |
 | Email | `tickets:fetch-mail` reads unread mail from the support mailbox every 5 minutes (`SUPPORT_IMAP_*`). Replies keep `[#123]` in the subject and thread back. |
-| Chatbot | `POST /api/tickets` — see [REST API](#rest-api). |
+| Chatbot | `POST /api/tickets` with a key from **Settings → API keys** — see [REST API](#rest-api). |
 
 The chatbot uses the REST API below (`POST /api/tickets`).
 
@@ -54,7 +54,8 @@ earnings, payouts, apps or settings. Add people under **Team**.
 ## REST API
 
 Base URL `https://admin-partners.thebrix.io/api`. Every request needs
-`Authorization: Bearer <SUPPORT_API_TOKEN>` (make one with `php artisan support:token`).
+`Authorization: Bearer <key>`. Create keys in **Settings → API keys** (one per tool, revocable,
+shown once); `SUPPORT_API_TOKEN` in `.env` also works.
 Send JSON. Responses are JSON wrapped in `data`; lists are paginated
 (`?page=`, `?per_page=` up to 100) and add `links` and `meta`. Errors: 401 bad token,
 404 not found, 422 validation (`{"message", "errors": {field: [...]}}`).
@@ -89,7 +90,7 @@ Create a ticket (only `message` is required):
 
 ```bash
 curl -X POST https://admin-partners.thebrix.io/api/tickets \
-  -H "Authorization: Bearer $SUPPORT_API_TOKEN" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $BRIX_API_KEY" -H "Content-Type: application/json" \
   -d '{
     "message": "My discount is not applying at checkout",
     "subject": "Discount not applying",

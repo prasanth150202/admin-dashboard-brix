@@ -41,6 +41,28 @@ class ApiTest extends TestCase
         }
     }
 
+    public function test_keys_made_in_settings_work_until_revoked(): void
+    {
+        config(['support.api_token' => null]);
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)->post(route('settings.api-keys.store'), ['name' => 'Website chatbot'])
+            ->assertRedirect()->assertSessionHas('new_api_key');
+        $token = session('new_api_key')['token'];
+        $key = \App\Models\ApiKey::sole();
+        $this->assertNotSame($token, $key->token_hash);
+        $this->actingAs($admin)->get(route('settings'))->assertOk()->assertSee('Website chatbot')->assertSee($key->prefix);
+
+        $this->withHeaders(['Authorization' => "Bearer {$token}"])->getJson('/api/apps')->assertOk();
+        $this->assertNotNull($key->fresh()->last_used_at);
+
+        // Team members can't make keys.
+        $this->actingAs(User::factory()->team()->create())->post(route('settings.api-keys.store'), ['name' => 'x'])->assertForbidden();
+
+        $this->actingAs($admin)->delete(route('settings.api-keys.destroy', $key))->assertRedirect();
+        $this->withHeaders(['Authorization' => "Bearer {$token}"])->getJson('/api/apps')->assertUnauthorized();
+    }
+
     public function test_ticket_crud(): void
     {
         $agent = User::factory()->team()->create();
