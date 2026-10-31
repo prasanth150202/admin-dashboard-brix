@@ -87,7 +87,7 @@ class SupportTest extends TestCase
             ->assertCreated()->assertJsonPath('created', true);
 
         $this->postJson('/api/tickets', ['message' => 'Still broken', 'conversation_id' => 'conv-1'], ['Authorization' => 'Bearer bot-secret'])
-            ->assertOk()->assertJsonPath('id', $first->json('id'))->assertJsonPath('created', false);
+            ->assertOk()->assertJsonPath('data.id', $first->json('data.id'))->assertJsonPath('created', false);
 
         $ticket = Ticket::sole();
         $this->assertSame('chatbot', $ticket->source);

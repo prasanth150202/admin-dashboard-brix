@@ -108,9 +108,7 @@ class TicketsController extends Controller
             'shop_domain' => ['nullable', 'string', 'max:190'],
         ]);
 
-        $domain = TicketIntake::normalizeDomain($data['shop_domain'] ?? null);
-        $data['shop_domain'] = $domain;
-        $data['shop_id'] = $domain ? Shop::where('myshopify_domain', $domain)->value('id') : null;
+        $data = TicketIntake::shopFields($data['shop_domain'] ?? null) + $data;
         $data['resolved_at'] = $data['status'] === 'resolved' ? ($ticket->resolved_at ?? now()) : null;
 
         $ticket->fill($data)->save();

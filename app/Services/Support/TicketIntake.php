@@ -81,6 +81,17 @@ class TicketIntake
         return $message;
     }
 
+    /** Fields to save when a ticket's store is changed to $input (or cleared). */
+    public static function shopFields(?string $input): array
+    {
+        $domain = self::normalizeDomain($input);
+
+        return [
+            'shop_domain' => $domain,
+            'shop_id' => $domain ? Shop::where('myshopify_domain', $domain)->value('id') : null,
+        ];
+    }
+
     /** Matches an app by Partner app ID, local ID or (case-insensitive) name. */
     public function resolveApp(mixed $ref): ?PartnerApp
     {
