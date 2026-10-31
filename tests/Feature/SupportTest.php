@@ -173,6 +173,24 @@ class SupportTest extends TestCase
         $this->assertNotNull($task->fresh()->done_at);
         $this->assertSame('in_progress', $setup->fresh()->status);
 
+        // Sales hands it to the team: who assigned it is recorded and shows on the dashboard.
+        $sales = User::factory()->create(['role' => 'sales', 'name' => 'Sam Sales']);
+        $agent = User::factory()->team()->create(['name' => 'Ravi']);
+        $this->actingAs($sales)->patch(route('setups.update', $setup), ['status' => 'in_progress', 'assignee_id' => $agent->id])->assertRedirect();
+        $setup->refresh();
+        $this->assertSame($sales->id, $setup->assigned_by);
+        $this->assertNotNull($setup->assigned_at);
+        $this->actingAs($sales)->get('/')->assertRedirect(route('tickets.index'));
+        $this->actingAs($admin)->get(route('setups.show', $setup))->assertSee('Assigned by Sam Sales');
+        $people = $this->actingAs($admin)->get('/')->assertOk()->viewData('people')->keyBy('name');
+        $this->assertSame(1, $people['Ravi']->open_setups);
+        $this->assertSame(1, $people['Sam Sales']->handed_out);
+
+        // Saving again without changing the assignee keeps the original assigner.
+        $this->actingAs($admin)->patch(route('setups.update', $setup), ['status' => 'waiting', 'assignee_id' => $agent->id]);
+        $this->assertSame($sales->id, $setup->fresh()->assigned_by);
+        $this->actingAs($admin);
+
         // Older installs can still be started by hand.
         $this->post(route('setups.store'), ['shop_id' => $old->id, 'partner_app_id' => $this->partnerApp->id])->assertRedirect();
         $this->assertSame(2, Setup::count());

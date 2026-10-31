@@ -26,7 +26,7 @@ class User extends Authenticatable
         'password',
     ];
 
-    public const ROLES = ['admin' => 'Admin', 'team' => 'Team'];
+    public const ROLES = ['admin' => 'Admin', 'sales' => 'Sales', 'team' => 'Team'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -59,6 +59,12 @@ class User extends Authenticatable
     public function assignedSetups(): HasMany
     {
         return $this->hasMany(Setup::class, 'assignee_id');
+    }
+
+    /** Setups this person handed to someone (sales → team). */
+    public function setupsHandedOut(): HasMany
+    {
+        return $this->hasMany(Setup::class, 'assigned_by');
     }
 
     /** Admins see earnings, payouts and settings; the team doesn't. */

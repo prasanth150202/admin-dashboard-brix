@@ -9,6 +9,7 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Services\Support\SetupPlanner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class SetupsController extends Controller
@@ -20,7 +21,7 @@ class SetupsController extends Controller
         $assignee = $filters['assignee'] ?? '';
 
         $setups = Setup::query()
-            ->with(['shop.installs', 'app', 'assignee'])
+            ->with(['shop.installs', 'app', 'assignee', 'assigner'])
             ->withCount(['tasks', 'tasks as done_count' => fn ($q) => $q->whereNotNull('done_at')])
             ->when($status === 'active', fn ($q) => $q->active())
             ->when(array_key_exists($status, Setup::STATUSES), fn ($q) => $q->where('status', $status))
@@ -56,14 +57,16 @@ class SetupsController extends Controller
         ]);
 
         $setup = $planner->start(Shop::findOrFail($data['shop_id']), PartnerApp::findOrFail($data['partner_app_id']));
-        $setup->update(['assignee_id' => $setup->assignee_id ?? $request->user()->id]);
+        if (! $setup->assignee_id) {
+            $setup->assignTo($request->user()->id, $request->user())->save();
+        }
 
         return redirect()->route('setups.show', $setup)->with('status', 'Setup started.');
     }
 
     public function show(Setup $setup)
     {
-        $setup->load(['shop.installs.app', 'app', 'assignee', 'tasks.doneBy']);
+        $setup->load(['shop.installs.app', 'app', 'assignee', 'assigner', 'tasks.doneBy']);
 
         return view('setups.show', [
             'setup' => $setup,
@@ -83,7 +86,9 @@ class SetupsController extends Controller
         ]);
 
         $data['completed_at'] = $data['status'] === 'done' ? ($setup->completed_at ?? now()) : null;
-        $setup->fill($data)->save();
+        $setup->assignTo(isset($data['assignee_id']) ? (int) $data['assignee_id'] : null, $request->user())
+            ->fill(Arr::except($data, 'assignee_id'))
+            ->save();
 
         return back()->with('status', 'Setup updated.');
     }

@@ -110,7 +110,7 @@ class PartnerSyncTest extends TestCase
         $this->get('/login')->assertOk();
 
         $this->actingAs($user);
-        $this->get('/')->assertOk()->assertSee('Installed stores');
+        $this->get('/')->assertOk()->assertSee('Total installs');
         $this->get('/?app='.$this->partnerApp->id)->assertOk();
         $this->get('/apps')->assertOk()->assertSee('Cart Ninja');
         $this->get('/stores')->assertOk()->assertSee('client.myshopify.com');
@@ -122,6 +122,33 @@ class PartnerSyncTest extends TestCase
         $this->get('/payouts/2026-10-16')->assertOk()->assertSee('client.myshopify.com');
         $this->get('/payouts/2026-10-16/export')->assertOk();
         $this->get('/settings')->assertOk()->assertSee('1234');
+    }
+
+    public function test_overview_metrics(): void
+    {
+        app(SyncRunner::class)->run();
+        $this->travelTo(Carbon::parse('2026-10-25 12:00:00'));
+        $admin = User::factory()->create();
+
+        $stats = $this->actingAs($admin)->get('/')->assertOk()->viewData('stats');
+
+        // client (paid, installed), dev (test charge, installed), gone (uninstalled).
+        $this->assertSame(3, $stats['total_installs']);
+        $this->assertSame(2, $stats['installed_now']);
+        $this->assertSame(1, $stats['actual_stores']);
+        $this->assertSame(1, $stats['dev_stores']);
+        $this->assertSame(0, $stats['unpaid_stores']);
+        $this->assertSame(66.7, $stats['install_rate']);
+        $this->assertSame(33.3, $stats['uninstall_rate']);
+        // Real stores: client + gone; one of them paid.
+        $this->assertSame(50.0, $stats['paid_conversion']);
+        $this->assertSame('35.00', number_format((float) $stats['period_net'], 2));
+
+        // The Pro plan on the client store counts; the dev store's test charge doesn't.
+        $plans = $this->get('/')->viewData('plans');
+        $this->assertCount(1, $plans);
+        $this->assertSame('Pro', $plans[0]->plan_name);
+        $this->assertSame(1, (int) $plans[0]->stores);
     }
 
     public function test_payout_periods(): void

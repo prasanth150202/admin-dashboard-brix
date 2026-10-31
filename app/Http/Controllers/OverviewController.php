@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\AppEvent;
 use App\Models\AppInstall;
 use App\Models\PartnerApp;
+use App\Models\Setup;
 use App\Models\Shop;
 use App\Models\SyncRun;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Partner\PayoutPeriod;
 use Illuminate\Http\Request;
 
@@ -33,17 +35,78 @@ class OverviewController extends Controller
             ->count();
 
         [$periodStart, $periodEnd] = PayoutPeriod::for(now());
+        [$prevStart, $prevEnd] = PayoutPeriod::for($periodStart->copy()->subDay());
+
+        $events = AppEvent::query()->when($appId, fn ($q) => $q->where('partner_app_id', $appId));
+        $eventsBetween = fn (string $type, int $fromDaysAgo, int $toDaysAgo) => (clone $events)
+            ->where('type', $type)
+            ->whereBetween('occurred_at', [now()->subDays($fromDaysAgo), now()->subDays($toDaysAgo)])
+            ->count();
+        $realStores = fn ($q) => $q->where('kind', '!=', Shop::KIND_TEST);
+        $pct = fn (int $part, int $whole) => $whole > 0 ? round($part / $whole * 100, 1) : null;
+
+        // An "install" is one store × one app; a store with two apps counts twice.
+        $everInstalled = (clone $installs)->count();
+        $installedNow = (clone $installs)->where('status', AppInstall::STATUS_INSTALLED)->count();
+        $realEver = (clone $installs)->whereHas('shop', $realStores)->distinct()->count('shop_id');
+        $paidEver = (clone $installs)->whereHas('shop', fn ($q) => $q->where('kind', Shop::KIND_CLIENT))->distinct()->count('shop_id');
 
         $stats = [
-            'installed_stores' => (clone $installs)->where('status', AppInstall::STATUS_INSTALLED)->distinct()->count('shop_id'),
+            'total_installs' => $everInstalled,
+            'installed_now' => $installedNow,
+            'actual_stores' => $installedShops(Shop::KIND_CLIENT),
+            'dev_stores' => $installedShops(Shop::KIND_TEST),
+            'unpaid_stores' => $installedShops(Shop::KIND_UNKNOWN),
             'paying_now' => (clone $installs)->payingNow()->distinct()->count('shop_id'),
-            'client_stores' => $installedShops(Shop::KIND_CLIENT),
-            'test_stores' => $installedShops(Shop::KIND_TEST),
-            'unknown_stores' => $installedShops(Shop::KIND_UNKNOWN),
-            'net_30d' => (clone $transactions)->where('occurred_at', '>=', now()->subDays(30))->sum('net_amount'),
+
+            'installs_30d' => $eventsBetween(AppEvent::INSTALLED, 30, 0),
+            'installs_prev_30d' => $eventsBetween(AppEvent::INSTALLED, 60, 30),
+            'uninstalls_30d' => $eventsBetween(AppEvent::UNINSTALLED, 30, 0),
+            'uninstalls_prev_30d' => $eventsBetween(AppEvent::UNINSTALLED, 60, 30),
+            'install_rate' => $pct($installedNow, $everInstalled),
+            'uninstall_rate' => $pct($everInstalled - $installedNow, $everInstalled),
+            'paid_conversion' => $pct($paidEver, $realEver),
+
             'period_net' => (clone $transactions)->whereDate('payout_period_start', $periodStart)->sum('net_amount'),
+            'prev_period_net' => (clone $transactions)->whereDate('payout_period_start', $prevStart)->sum('net_amount'),
+            'net_30d' => (clone $transactions)->where('occurred_at', '>=', now()->subDays(30))->sum('net_amount'),
             'lifetime_net' => (clone $transactions)->sum('net_amount'),
         ];
+
+        // Actual (non-development) stores on each active, real plan right now.
+        $plans = (clone $installs)
+            ->with('app')
+            ->where('status', AppInstall::STATUS_INSTALLED)
+            ->where('plan_status', 'active')
+            ->where('plan_test', false)
+            ->whereHas('shop', $realStores)
+            ->selectRaw('partner_app_id, plan_name, plan_amount, plan_currency, COUNT(*) as stores')
+            ->groupBy('partner_app_id', 'plan_name', 'plan_amount', 'plan_currency')
+            ->orderByDesc('stores')
+            ->get();
+        $withoutPlan = (clone $installs)
+            ->where('status', AppInstall::STATUS_INSTALLED)
+            ->whereHas('shop', $realStores)
+            ->where(fn ($q) => $q->whereNull('plan_status')->orWhere('plan_status', '!=', 'active')->orWhere('plan_test', true))
+            ->count();
+
+        $setups = Setup::query()->when($appId, fn ($q) => $q->where('partner_app_id', $appId));
+        $setupStats = [
+            'todo' => (clone $setups)->where('status', 'todo')->count(),
+            'in_progress' => (clone $setups)->where('status', 'in_progress')->count(),
+            'waiting' => (clone $setups)->where('status', 'waiting')->count(),
+            'overdue' => (clone $setups)->active()->whereDate('due_on', '<', today())->count(),
+            'unassigned' => (clone $setups)->active()->whereNull('assignee_id')->count(),
+            'done_30d' => (clone $setups)->where('status', 'done')->where('completed_at', '>=', now()->subDays(30))->count(),
+        ];
+
+        $forApp = fn ($q) => $q->when($appId, fn ($q) => $q->where('partner_app_id', $appId));
+        $people = User::withCount([
+            'assignedSetups as open_setups' => fn ($q) => $forApp($q->active()),
+            'assignedSetups as overdue_setups' => fn ($q) => $forApp($q->active()->whereDate('due_on', '<', today())),
+            'assignedSetups as done_setups' => fn ($q) => $forApp($q->where('status', 'done')->where('completed_at', '>=', now()->subDays(30))),
+            'setupsHandedOut as handed_out' => fn ($q) => $forApp($q->where('assigned_at', '>=', now()->subDays(30))->whereColumn('assigned_by', '!=', 'assignee_id')),
+        ])->orderByRaw("CASE role WHEN 'sales' THEN 0 WHEN 'team' THEN 1 ELSE 2 END")->orderBy('name')->get();
 
         $topStores = (clone $transactions)
             ->selectRaw('shop_id, SUM(net_amount) as net')
@@ -66,6 +129,13 @@ class OverviewController extends Controller
             'appId' => $appId,
             'stats' => $stats,
             'periodLabel' => PayoutPeriod::label($periodStart, $periodEnd),
+            'prevPeriodLabel' => PayoutPeriod::label($prevStart, $prevEnd),
+            'periodStart' => $periodStart,
+            'prevStart' => $prevStart,
+            'plans' => $plans,
+            'withoutPlan' => $withoutPlan,
+            'setupStats' => $setupStats,
+            'people' => $people,
             'revenueChart' => $this->revenueChart($apps, $appId),
             'installChart' => $this->installChart($appId),
             'topStores' => $topStores,

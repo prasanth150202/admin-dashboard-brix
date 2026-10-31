@@ -57,7 +57,10 @@
                     </td>
                     <td><x-progress :done="$setup->done_count" :total="$setup->tasks_count" /></td>
                     <td><div class="flex flex-col gap-1"><x-setup-status :setup="$setup" /></div></td>
-                    <td class="whitespace-nowrap">{{ $setup->assignee?->name ?? '—' }}</td>
+                    <td class="whitespace-nowrap">
+                        {{ $setup->assignee?->name ?? '—' }}
+                        @if ($setup->assigner && $setup->assigner->id !== $setup->assignee_id)<div class="text-xs text-muted">by {{ $setup->assigner->name }}</div>@endif
+                    </td>
                     <td class="r whitespace-nowrap">{{ short_date($setup->due_on) }}</td>
                 </tr>
             @empty

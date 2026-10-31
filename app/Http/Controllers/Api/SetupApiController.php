@@ -10,12 +10,13 @@ use App\Services\Support\SetupPlanner;
 use App\Services\Support\TicketIntake;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SetupApiController extends Controller
 {
-    private const RELATIONS = ['shop', 'app', 'assignee', 'tasks'];
+    private const RELATIONS = ['shop', 'app', 'assignee', 'assigner', 'tasks'];
 
     public function index(Request $request)
     {
@@ -63,7 +64,9 @@ class SetupApiController extends Controller
         $created = $setup->wasRecentlyCreated;
 
         if ($created) {
-            $setup->update(collect($data)->only(['assignee_id', 'due_on', 'notes'])->all());
+            $setup->assignTo(isset($data['assignee_id']) ? (int) $data['assignee_id'] : null, null)
+                ->fill(collect($data)->only(['due_on', 'notes'])->all())
+                ->save();
         }
 
         return SetupResource::make($setup->fresh(self::RELATIONS))
@@ -91,7 +94,10 @@ class SetupApiController extends Controller
             $data['completed_at'] = $data['status'] === 'done' ? ($setup->completed_at ?? now()) : null;
         }
 
-        $setup->fill($data)->save();
+        if (array_key_exists('assignee_id', $data)) {
+            $setup->assignTo(isset($data['assignee_id']) ? (int) $data['assignee_id'] : null, null);
+        }
+        $setup->fill(Arr::except($data, 'assignee_id'))->save();
 
         return SetupResource::make($setup->fresh(self::RELATIONS));
     }

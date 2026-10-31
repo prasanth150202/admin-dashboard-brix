@@ -1,6 +1,6 @@
 <x-layout title="Team">
     <h1 class="text-xl font-semibold">Team</h1>
-    <p class="mt-1 text-sm text-ink-2"><b>Admins</b> see everything. <b>Team</b> members see tickets, setups and stores, but no earnings, payouts or settings.</p>
+    <p class="mt-1 text-sm text-ink-2"><b>Admins</b> see everything. <b>Sales</b> and <b>Team</b> members see tickets, setups and stores, but no earnings, payouts or settings. Sales hands setups to the team; the dashboard shows who assigned what.</p>
 
     <div class="card mt-6 overflow-x-auto">
         <table class="data-table">

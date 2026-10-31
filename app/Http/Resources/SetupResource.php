@@ -16,6 +16,8 @@ class SetupResource extends JsonResource
             'store' => StoreResource::make($this->whenLoaded('shop')),
             'app' => AppResource::make($this->whenLoaded('app')),
             'assignee' => $this->whenLoaded('assignee', fn () => $this->assignee ? UserResource::make($this->assignee) : null),
+            'assigned_by' => $this->whenLoaded('assigner', fn () => $this->assigner ? UserResource::make($this->assigner) : null),
+            'assigned_at' => $this->assigned_at?->toIso8601String(),
             'due_on' => $this->due_on?->toDateString(),
             'overdue' => $this->isOverdue(),
             'notes' => $this->notes,

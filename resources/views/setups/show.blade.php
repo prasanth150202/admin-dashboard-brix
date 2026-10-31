@@ -71,6 +71,9 @@
                             <option value="{{ $user->id }}" @selected($setup->assignee_id === $user->id)>{{ $user->name }}</option>
                         @endforeach
                     </select>
+                    @if ($setup->assignee_id && $setup->assigned_at)
+                        <p class="mt-1 text-xs text-muted">Assigned{{ $setup->assigner ? ' by '.$setup->assigner->name : '' }} · {{ $setup->assigned_at->format('M j, H:i') }}</p>
+                    @endif
                 </div>
                 <div>
                     <label for="due_on" class="block text-sm text-ink-2">Due</label>
