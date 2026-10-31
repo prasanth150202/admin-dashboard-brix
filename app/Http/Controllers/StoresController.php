@@ -58,13 +58,16 @@ class StoresController extends Controller
         }, 'stores-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
     }
 
-    public function show(Shop $shop)
+    public function show(Request $request, Shop $shop)
     {
-        $shop->load(['installs.app']);
+        $shop->load(['installs.app', 'setups' => fn ($q) => $q->with(['app', 'assignee'])->withCount(['tasks', 'tasks as done_count' => fn ($q) => $q->whereNotNull('done_at')])]);
 
         return view('stores.show', [
             'shop' => $shop,
-            'transactions' => $shop->transactions()->with('app')->latest('occurred_at')->paginate(25, ['*'], 'tx'),
+            'tickets' => $shop->tickets()->with(['app', 'assignee'])->latest('last_activity_at')->limit(20)->get(),
+            'transactions' => $request->user()->isAdmin()
+                ? $shop->transactions()->with('app')->latest('occurred_at')->paginate(25, ['*'], 'tx')
+                : null,
             'events' => $shop->events()->with('app')->latest('occurred_at')->limit(100)->get(),
         ]);
     }

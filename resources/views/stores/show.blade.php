@@ -9,10 +9,12 @@
                 · first seen {{ short_date($shop->first_seen_at) }}
             </p>
         </div>
-        <div class="text-right">
-            <div class="text-xs font-medium uppercase tracking-wide text-muted">Lifetime net</div>
-            <div class="text-2xl font-semibold">{{ money($shop->lifetime_net) }}</div>
-        </div>
+        @can('admin')
+            <div class="text-right">
+                <div class="text-xs font-medium uppercase tracking-wide text-muted">Lifetime net</div>
+                <div class="text-2xl font-semibold">{{ money($shop->lifetime_net) }}</div>
+            </div>
+        @endcan
     </div>
 
     <div class="mt-6 grid gap-4 lg:grid-cols-3">
@@ -27,13 +29,15 @@
                         <dt class="text-ink-2">Plan</dt>
                         <dd class="text-right">
                             @if ($install->plan_name)
-                                {{ $install->plan_name }} · {{ money($install->plan_amount, $install->plan_currency) }}
+                                {{ $install->plan_name }}@can('admin') · {{ money($install->plan_amount, $install->plan_currency) }}@endcan
                                 <div class="text-xs text-muted">{{ $install->plan_status }}@if ($install->plan_test) · test charge @endif</div>
                             @else
                                 <span class="text-muted">No plan</span>
                             @endif
                         </dd>
-                        <dt class="text-ink-2">Net earned</dt><dd class="text-right num">{{ money($install->lifetime_net) }}</dd>
+                        @can('admin')
+                            <dt class="text-ink-2">Net earned</dt><dd class="text-right num">{{ money($install->lifetime_net) }}</dd>
+                        @endcan
                         <dt class="text-ink-2">First installed</dt><dd class="text-right">{{ short_date($install->first_installed_at) }}</dd>
                         @if ($install->install_count > 1)
                             <dt class="text-ink-2">Installs</dt><dd class="text-right">{{ $install->install_count }}×</dd>
@@ -48,6 +52,24 @@
                     @if ($install->uninstall_reason)
                         <p class="mt-3 text-xs text-ink-2">Reason: {{ $install->uninstall_reason }}</p>
                     @endif
+                    @php $setup = $shop->setups->firstWhere('partner_app_id', $install->partner_app_id); @endphp
+                    <div class="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
+                        @if ($setup)
+                            <a href="{{ route('setups.show', $setup) }}" class="text-sm hover:underline">Setup</a>
+                            <div class="flex items-center gap-3">
+                                <x-progress :done="$setup->done_count" :total="$setup->tasks_count" />
+                                <x-setup-status :setup="$setup" />
+                            </div>
+                        @else
+                            <span class="text-sm text-ink-2">No setup</span>
+                            <form method="POST" action="{{ route('setups.store') }}">
+                                @csrf
+                                <input type="hidden" name="shop_id" value="{{ $shop->id }}">
+                                <input type="hidden" name="partner_app_id" value="{{ $install->partner_app_id }}">
+                                <button class="btn">Start setup</button>
+                            </form>
+                        @endif
+                    </div>
                 </section>
             @empty
                 <p class="text-sm text-ink-2">No install events for this store — it only appears in transactions.</p>
@@ -69,6 +91,32 @@
         </form>
     </div>
 
+    <section class="card mt-6">
+        <div class="flex items-center justify-between gap-2 px-4 pt-4">
+            <h2 class="text-sm font-semibold">Tickets</h2>
+            <a href="{{ route('tickets.create', ['shop' => $shop->id]) }}" class="text-sm text-ink-2 hover:text-ink">New ticket</a>
+        </div>
+        <div class="mt-2 overflow-x-auto">
+            <table class="data-table">
+                <thead><tr><th>Ticket</th><th>App</th><th>Status</th><th>Assignee</th><th class="r">Last activity</th></tr></thead>
+                <tbody>
+                @forelse ($tickets as $ticket)
+                    <tr>
+                        <td><a href="{{ route('tickets.show', $ticket) }}" class="hover:underline"><span class="text-muted">{{ $ticket->number() }}</span> {{ $ticket->subject }}</a></td>
+                        <td>{{ $ticket->app?->name ?? '—' }}</td>
+                        <td><div class="flex flex-col gap-1"><x-ticket-status :ticket="$ticket" /></div></td>
+                        <td>{{ $ticket->assignee?->name ?? '—' }}</td>
+                        <td class="r whitespace-nowrap">{{ $ticket->last_activity_at?->diffForHumans() }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="text-ink-2">No tickets from this store.</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    @if ($transactions)
     <section class="card mt-6">
         <h2 class="px-4 pt-4 text-sm font-semibold">Transactions</h2>
         <div class="mt-2 overflow-x-auto">
@@ -93,6 +141,7 @@
         </div>
         @if ($transactions->hasPages())<div class="px-4 pb-4">{{ $transactions->links() }}</div>@endif
     </section>
+    @endif
 
     <section class="card mt-6">
         <h2 class="px-4 pt-4 text-sm font-semibold">Event timeline</h2>
@@ -106,7 +155,7 @@
                         <td>{{ $e->app->name }}</td>
                         <td>{{ $e->label() }}</td>
                         <td class="text-ink-2">
-                            @if ($e->charge_name){{ $e->charge_name }} · {{ money($e->charge_amount, $e->charge_currency) }}@if ($e->charge_test) · test @endif @endif
+                            @if ($e->charge_name){{ $e->charge_name }}@can('admin') · {{ money($e->charge_amount, $e->charge_currency) }}@endcan @if ($e->charge_test) · test @endif @endif
                             @if ($e->reason){{ $e->reason }}@endif
                             @if ($e->description)<div class="text-xs">{{ $e->description }}</div>@endif
                         </td>

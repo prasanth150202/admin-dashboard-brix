@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -21,8 +22,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'role',
         'password',
     ];
+
+    public const ROLES = ['admin' => 'Admin', 'team' => 'Team'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -45,5 +49,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'assignee_id');
+    }
+
+    public function assignedSetups(): HasMany
+    {
+        return $this->hasMany(Setup::class, 'assignee_id');
+    }
+
+    /** Admins see earnings, payouts and settings; the team doesn't. */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

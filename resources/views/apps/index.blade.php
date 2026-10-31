@@ -15,6 +15,7 @@
                 <th class="r" title="Sum of active plan prices, before Shopify's fee">Active plans (gross)</th>
                 <th class="r">Net · 30 days</th>
                 <th class="r">Lifetime net</th>
+                <th>Setup checklist</th>
             </tr>
             </thead>
             <tbody>
@@ -29,9 +30,10 @@
                     <td class="r">{{ money($row['plan_value']) }}</td>
                     <td class="r">{{ money($row['net_30d']) }}</td>
                     <td class="r">{{ money($row['lifetime_net']) }}</td>
+                    <td class="whitespace-nowrap"><a href="{{ route('apps.checklist', $row['app']) }}" class="hover:underline">{{ $row['steps'] ? $row['steps'].' '.Str::plural('step', $row['steps']) : 'Write checklist' }}</a></td>
                 </tr>
             @empty
-                <tr><td colspan="9" class="text-ink-2">No apps yet. <a href="{{ route('settings') }}" class="underline">Add one in Settings</a>.</td></tr>
+                <tr><td colspan="10"class="text-ink-2">No apps yet. <a href="{{ route('settings') }}" class="underline">Add one in Settings</a>.</td></tr>
             @endforelse
             </tbody>
         </table>

@@ -43,6 +43,16 @@ class Shop extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function setups(): HasMany
+    {
+        return $this->hasMany(Setup::class);
+    }
+
     public function displayName(): string
     {
         return $this->name ?: $this->myshopify_domain;

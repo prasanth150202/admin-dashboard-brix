@@ -24,6 +24,7 @@ class AppsController extends Controller
                 'plan_value' => (clone $installs)->payingNow()->sum('plan_amount'),
                 'net_30d' => $app->transactions()->where('occurred_at', '>=', now()->subDays(30))->sum('net_amount'),
                 'lifetime_net' => $app->transactions()->sum('net_amount'),
+                'steps' => $app->setupSteps()->count(),
             ];
         });
 

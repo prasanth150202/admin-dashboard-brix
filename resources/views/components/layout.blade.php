@@ -10,20 +10,24 @@
 </head>
 <body class="min-h-screen font-sans antialiased">
 @php
-    $nav = [
-        ['overview', 'Overview', 'overview'],
-        ['apps.index', 'Apps', 'apps.*'],
-        ['stores.index', 'Stores', 'stores.*'],
-        ['payouts.index', 'Payouts', 'payouts.*'],
-        ['settings', 'Settings', 'settings*'],
-    ];
+    $admin = auth()->user()->isAdmin();
+    $nav = array_values(array_filter([
+        $admin ? ['overview', 'Overview', 'overview', null] : null,
+        ['tickets.index', 'Tickets', 'tickets.*', \App\Models\Ticket::where('status', 'open')->count()],
+        ['setups.index', 'Setups', 'setups.*', \App\Models\Setup::active()->count()],
+        ['stores.index', 'Stores', 'stores.*', null],
+        $admin ? ['apps.index', 'Apps', 'apps.*', null] : null,
+        $admin ? ['payouts.index', 'Payouts', 'payouts.*', null] : null,
+        $admin ? ['team.index', 'Team', 'team.*', null] : null,
+        $admin ? ['settings', 'Settings', 'settings*', null] : null,
+    ]));
 @endphp
 <div class="lg:flex">
     <aside class="lg:w-56 lg:shrink-0 lg:min-h-screen border-b lg:border-b-0 lg:border-r border-line bg-surface">
         <div class="flex items-center justify-between gap-3 px-4 py-4 lg:px-5">
             <a href="{{ route('overview') }}" class="flex items-center gap-2.5 font-semibold">
                 <img src="{{ asset('images/brix-icon.png') }}" alt="" class="h-7 w-7 rounded-md">
-                <span>Partner Dashboard</span>
+                <span>Brix Dashboard</span>
             </a>
             <form method="POST" action="{{ route('logout') }}" class="lg:hidden">
                 @csrf
@@ -31,13 +35,13 @@
             </form>
         </div>
         <nav class="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-3">
-            @foreach ($nav as [$route, $label, $pattern])
+            @foreach ($nav as [$route, $label, $pattern, $count])
                 <a href="{{ route($route) }}"
                    @class([
-                       'whitespace-nowrap rounded-lg px-3 py-2 text-sm',
+                       'flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm',
                        'bg-surface-2 font-medium text-ink' => request()->routeIs($pattern),
                        'text-ink-2 hover:bg-surface-2 hover:text-ink' => ! request()->routeIs($pattern),
-                   ])>{{ $label }}</a>
+                   ])>{{ $label }}@if ($count)<span class="num text-xs text-muted">{{ $count }}</span>@endif</a>
             @endforeach
         </nav>
         <div class="hidden lg:block px-5 pt-6 text-xs text-muted">
@@ -65,9 +69,11 @@
 
         {{ $slot }}
 
-        <p class="mt-10 text-xs text-muted">
-            Data from the Shopify Partner API. Shopify notes transaction data is for analytics, not accounting — reconcile payouts against the Partner Dashboard.
-        </p>
+        @if ($admin)
+            <p class="mt-10 text-xs text-muted">
+                Data from the Shopify Partner API. Shopify notes transaction data is for analytics, not accounting — reconcile payouts against the Partner Dashboard.
+            </p>
+        @endif
     </main>
 </div>
 </body>

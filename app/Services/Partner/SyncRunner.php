@@ -4,6 +4,7 @@ namespace App\Services\Partner;
 
 use App\Models\PartnerApp;
 use App\Models\SyncRun;
+use App\Services\Support\SetupPlanner;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Throwable;
@@ -19,6 +20,7 @@ class SyncRunner
         private readonly EventSync $events,
         private readonly TransactionSync $transactions,
         private readonly ShopRollup $rollup,
+        private readonly SetupPlanner $setups,
     ) {}
 
     public function run(bool $full = false, string $trigger = 'cli'): SyncRun
@@ -49,9 +51,17 @@ class SyncRunner
 
         $rebuilt = $this->rollup->rebuild($full ? null : array_values(array_unique($touched)));
 
+        try {
+            $planned = $this->setups->planRecentInstalls();
+        } catch (Throwable $e) {
+            report($e);
+            $planned = 0;
+            $errors[] = "Setups: {$e->getMessage()}";
+        }
+
         $run->forceFill([
             'status' => $errors === [] ? 'ok' : 'failed',
-            'message' => $errors === [] ? "Rebuilt {$rebuilt} stores." : implode("\n", $errors),
+            'message' => $errors === [] ? "Rebuilt {$rebuilt} stores.".($planned ? " Started {$planned} setups." : '') : implode("\n", $errors),
             'finished_at' => now(),
         ])->save();
 

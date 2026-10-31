@@ -36,4 +36,9 @@ class PartnerApp extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
+    public function setupSteps(): HasMany
+    {
+        return $this->hasMany(SetupStep::class)->orderBy('position')->orderBy('id');
+    }
 }

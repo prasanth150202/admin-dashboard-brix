@@ -18,6 +18,10 @@ class OverviewController extends Controller
 
     public function __invoke(Request $request)
     {
+        if (! $request->user()->isAdmin()) {
+            return redirect()->route('tickets.index');
+        }
+
         $apps = PartnerApp::orderBy('id')->get();
         $appId = $apps->firstWhere('id', $request->integer('app'))?->id;
 

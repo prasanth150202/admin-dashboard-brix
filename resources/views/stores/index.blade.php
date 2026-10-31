@@ -4,7 +4,7 @@
             <h1 class="text-xl font-semibold">Stores</h1>
             <p class="mt-1 text-sm text-ink-2">{{ number_format($shops->total()) }} {{ Str::plural('store', $shops->total()) }} across all apps</p>
         </div>
-        <a href="{{ route('stores.export', request()->query()) }}" class="btn">Export CSV</a>
+        @can('admin')<a href="{{ route('stores.export', request()->query()) }}" class="btn">Export CSV</a>@endcan
     </div>
 
     <form method="GET" class="mt-5 flex flex-wrap items-center gap-2">
@@ -48,7 +48,7 @@
                 <th>Store</th>
                 <th>Type</th>
                 <th>Apps</th>
-                <th class="r">Lifetime net</th>
+                @can('admin')<th class="r">Lifetime net</th>@endcan
                 <th class="r">Last charge</th>
                 <th class="r">First seen</th>
             </tr>
@@ -67,12 +67,12 @@
                                 <span class="text-sm">{{ $install->app->name }}</span>
                                 <x-install-status :status="$install->status" />
                                 @if ($install->plan_status === 'active' && $install->status === 'installed')
-                                    <span class="text-xs text-muted">{{ $install->plan_name }} · {{ money($install->plan_amount, $install->plan_currency) }}@if ($install->plan_test) · test @endif</span>
+                                    <span class="text-xs text-muted">{{ $install->plan_name }}@can('admin') · {{ money($install->plan_amount, $install->plan_currency) }}@endcan @if ($install->plan_test) · test @endif</span>
                                 @endif
                             </div>
                         @endforeach
                     </td>
-                    <td class="r">{{ money($shop->lifetime_net) }}</td>
+                    @can('admin')<td class="r">{{ money($shop->lifetime_net) }}</td>@endcan
                     <td class="r whitespace-nowrap">{{ short_date($shop->last_charge_at) }}</td>
                     <td class="r whitespace-nowrap">{{ short_date($shop->first_seen_at) }}</td>
                 </tr>
