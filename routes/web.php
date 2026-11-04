@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FeatureRequestsController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PayoutsController;
@@ -43,6 +44,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/setups/{setup}/tasks', [SetupsController::class, 'addTask'])->name('setups.tasks.store');
     Route::post('/setups/{setup}/tasks/{task}/toggle', [SetupsController::class, 'toggleTask'])->name('setups.tasks.toggle');
     Route::delete('/setups/{setup}/tasks/{task}', [SetupsController::class, 'destroyTask'])->name('setups.tasks.destroy');
+
+    // Anyone can follow requests; who can raise or move them is checked by gate.
+    Route::get('/features', [FeatureRequestsController::class, 'index'])->name('features.index');
+    Route::get('/features/new', [FeatureRequestsController::class, 'create'])->name('features.create')->middleware('can:request-features');
+    Route::post('/features', [FeatureRequestsController::class, 'store'])->name('features.store')->middleware('can:request-features');
+    Route::get('/features/{feature}', [FeatureRequestsController::class, 'show'])->name('features.show');
+    Route::patch('/features/{feature}', [FeatureRequestsController::class, 'update'])->name('features.update')->middleware('can:develop');
+    Route::post('/features/{feature}/comments', [FeatureRequestsController::class, 'comment'])->name('features.comment');
+    Route::delete('/features/{feature}', [FeatureRequestsController::class, 'destroy'])->name('features.destroy')->middleware('can:admin');
 
     Route::get('/stores', [StoresController::class, 'index'])->name('stores.index');
     Route::get('/stores/{shop}', [StoresController::class, 'show'])->name('stores.show')->whereNumber('shop');

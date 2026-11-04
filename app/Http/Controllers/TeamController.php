@@ -24,10 +24,12 @@ class TeamController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190', 'unique:users,email'],
             'role' => ['required', Rule::in(array_keys(User::ROLES))],
+            'team' => ['nullable', Rule::in(array_keys(User::TEAMS))],
             'password' => ['required', 'string', 'min:10'],
         ]);
 
         $data['email'] = strtolower($data['email']);
+        $data['can_request_features'] = $request->boolean('can_request_features');
         User::create($data);
 
         return back()->with('status', "Added {$data['name']}. Share the password with them directly.");
@@ -37,6 +39,7 @@ class TeamController extends Controller
     {
         $data = $request->validate([
             'role' => ['required', Rule::in(array_keys(User::ROLES))],
+            'team' => ['nullable', Rule::in(array_keys(User::TEAMS))],
             'password' => ['nullable', 'string', 'min:10'],
         ]);
 
@@ -45,6 +48,8 @@ class TeamController extends Controller
         }
 
         $user->role = $data['role'];
+        $user->team = $data['team'] ?? null;
+        $user->can_request_features = $request->boolean('can_request_features');
         if (filled($data['password'] ?? null)) {
             $user->password = $data['password'];
         }

@@ -15,6 +15,7 @@
         $admin ? ['overview', 'Overview', 'overview', null] : null,
         ['tickets.index', 'Tickets', 'tickets.*', \App\Models\Ticket::where('status', 'open')->count()],
         ['setups.index', 'Setups', 'setups.*', \App\Models\Setup::active()->count()],
+        ['features.index', 'Features', 'features.*', \App\Models\FeatureRequest::active()->count()],
         ['stores.index', 'Stores', 'stores.*', null],
         $admin ? ['apps.index', 'Apps', 'apps.*', null] : null,
         $admin ? ['payouts.index', 'Payouts', 'payouts.*', null] : null,

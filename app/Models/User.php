@@ -23,10 +23,14 @@ class User extends Authenticatable
         'name',
         'email',
         'role',
+        'team',
+        'can_request_features',
         'password',
     ];
 
     public const ROLES = ['admin' => 'Admin', 'sales' => 'Sales', 'team' => 'Team'];
+
+    public const TEAMS = ['setup' => 'Setup', 'development' => 'Development'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -48,6 +52,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'can_request_features' => 'boolean',
         ];
     }
 
@@ -71,5 +76,17 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /** Admins, plus anyone an admin has allowed to. */
+    public function canRequestFeatures(): bool
+    {
+        return $this->isAdmin() || $this->can_request_features;
+    }
+
+    /** The development team (and admins) move feature requests along. */
+    public function isDeveloper(): bool
+    {
+        return $this->isAdmin() || $this->team === 'development';
     }
 }

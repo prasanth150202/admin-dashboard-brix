@@ -1,11 +1,12 @@
 <x-layout title="Team">
     <h1 class="text-xl font-semibold">Team</h1>
     <p class="mt-1 text-sm text-ink-2"><b>Admins</b> see everything. <b>Sales</b> and <b>Team</b> members see tickets, setups and stores, but no earnings, payouts or settings. Sales hands setups to the team; the dashboard shows who assigned what.</p>
+    <p class="mt-1 text-sm text-ink-2"><b>Teams:</b> the <b>Development</b> team updates the status of feature requests. Tick <b>Can request features</b> for anyone besides admins who should be able to raise them.</p>
 
     <div class="card mt-6 overflow-x-auto">
         <table class="data-table">
             <thead>
-            <tr><th>Name</th><th>Role</th><th class="r">Open tickets</th><th class="r">Open setups</th><th>Change role / reset password</th><th></th></tr>
+            <tr><th>Name</th><th>Role · team</th><th class="r">Open tickets</th><th class="r">Open setups</th><th>Change role, team, access / reset password</th><th></th></tr>
             </thead>
             <tbody>
             @foreach ($users as $user)
@@ -14,7 +15,10 @@
                         <div class="font-medium">{{ $user->name }}@if ($user->is(auth()->user()))<span class="text-xs font-normal text-muted"> · you</span>@endif</div>
                         <div class="text-xs text-muted">{{ $user->email }}</div>
                     </td>
-                    <td>{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</td>
+                    <td class="whitespace-nowrap">
+                        {{ \App\Models\User::ROLES[$user->role] ?? $user->role }}
+                        <div class="text-xs text-muted">{{ \App\Models\User::TEAMS[$user->team] ?? 'No team' }}{{ $user->canRequestFeatures() ? ' · requests features' : '' }}</div>
+                    </td>
                     <td class="r"><a href="{{ route('tickets.index', ['assignee' => $user->id]) }}" class="hover:underline">{{ $user->open_tickets }}</a></td>
                     <td class="r"><a href="{{ route('setups.index', ['assignee' => $user->id]) }}" class="hover:underline">{{ $user->open_setups }}</a></td>
                     <td>
@@ -25,6 +29,15 @@
                                     <option value="{{ $value }}" @selected($user->role === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
+                            <select name="team" class="field" aria-label="Team for {{ $user->name }}">
+                                <option value="">No team</option>
+                                @foreach (\App\Models\User::TEAMS as $value => $label)
+                                    <option value="{{ $value }}" @selected($user->team === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <label class="flex items-center gap-1.5 text-sm text-ink-2">
+                                <input type="checkbox" name="can_request_features" value="1" @checked($user->can_request_features)> Can request features
+                            </label>
                             <input name="password" type="password" minlength="10" placeholder="New password (optional)" autocomplete="new-password" class="field w-52" aria-label="New password for {{ $user->name }}">
                             <button class="btn">Save</button>
                         </form>
@@ -64,8 +77,22 @@
                 </select>
             </div>
             <div>
+                <label for="team" class="block text-sm text-ink-2">Team</label>
+                <select id="team" name="team" class="field mt-1 w-full">
+                    <option value="">No team</option>
+                    @foreach (\App\Models\User::TEAMS as $value => $label)
+                        <option value="{{ $value }}" @selected(old('team') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label for="password" class="block text-sm text-ink-2">Password (min 10 characters)</label>
                 <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password" class="field mt-1 w-full">
+            </div>
+            <div class="flex items-end pb-2.5">
+                <label class="flex items-center gap-2 text-sm text-ink-2">
+                    <input type="checkbox" name="can_request_features" value="1" @checked(old('can_request_features'))> Can request features
+                </label>
             </div>
         </div>
         @if ($errors->any())<p class="mt-3 text-sm" style="color: var(--critical)">{{ $errors->first() }}</p>@endif
