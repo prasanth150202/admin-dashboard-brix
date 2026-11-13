@@ -38,6 +38,10 @@
             </select>
         </div>
         <div>
+            <label for="assignee_id" class="block text-sm font-medium">Assign to <span class="font-normal text-muted">(optional)</span></label>
+            <x-person-select id="assignee_id" :users="$users" :selected="old('assignee_id')" first="development" empty="Let development pick" class="mt-1 w-full" />
+        </div>
+        <div>
             <label for="due_on" class="block text-sm font-medium">Wanted by <span class="font-normal text-muted">(optional)</span></label>
             <input id="due_on" name="due_on" type="date" value="{{ old('due_on') }}" class="field mt-1 w-full">
         </div>

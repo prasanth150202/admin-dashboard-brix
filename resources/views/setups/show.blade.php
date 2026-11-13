@@ -65,12 +65,7 @@
                 </div>
                 <div>
                     <label for="assignee_id" class="block text-sm text-ink-2">Assignee</label>
-                    <select id="assignee_id" name="assignee_id" class="field mt-1 w-full">
-                        <option value="">Unassigned</option>
-                        @foreach ($users as $user)
-                            <option value="{{ $user->id }}" @selected($setup->assignee_id === $user->id)>{{ $user->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-person-select id="assignee_id" :users="$users" :selected="$setup->assignee_id" first="setup" class="mt-1 w-full" />
                     @if ($setup->assignee_id && $setup->assigned_at)
                         <p class="mt-1 text-xs text-muted">Assigned{{ $setup->assigner ? ' by '.$setup->assigner->name : '' }} · {{ $setup->assigned_at->format('M j, H:i') }}</p>
                     @endif

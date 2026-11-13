@@ -6,6 +6,7 @@ use App\Http\Controllers\FeatureRequestsController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PayoutsController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupsController;
 use App\Http\Controllers\StoresController;
@@ -53,6 +54,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/features/{feature}', [FeatureRequestsController::class, 'update'])->name('features.update')->middleware('can:develop');
     Route::post('/features/{feature}/comments', [FeatureRequestsController::class, 'comment'])->name('features.comment');
     Route::delete('/features/{feature}', [FeatureRequestsController::class, 'destroy'])->name('features.destroy')->middleware('can:admin');
+
+    Route::get('/plan', [PlanController::class, 'index'])->name('plan.index');
+    Route::post('/plan/assign', [PlanController::class, 'assign'])->name('plan.assign');
 
     Route::get('/stores', [StoresController::class, 'index'])->name('stores.index');
     Route::get('/stores/{shop}', [StoresController::class, 'show'])->name('stores.show')->whereNumber('shop');

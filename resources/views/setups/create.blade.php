@@ -26,12 +26,7 @@
         </div>
         <div>
             <label for="assignee_id" class="block text-sm font-medium">Assign to</label>
-            <select id="assignee_id" name="assignee_id" class="field mt-1 w-full">
-                <option value="">Nobody yet</option>
-                @foreach ($users as $user)
-                    <option value="{{ $user->id }}" @selected(old('assignee_id') == $user->id)>{{ $user->name }} · {{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</option>
-                @endforeach
-            </select>
+            <x-person-select id="assignee_id" :users="$users" :selected="old('assignee_id')" first="setup" empty="Nobody yet" class="mt-1 w-full" />
         </div>
         <div>
             <label for="due_on" class="block text-sm font-medium">Due</label>

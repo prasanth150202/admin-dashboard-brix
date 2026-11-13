@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasMany(Setup::class, 'assignee_id');
     }
 
+    public function assignedFeatures(): HasMany
+    {
+        return $this->hasMany(FeatureRequest::class, 'assignee_id');
+    }
+
     /** Setups this person handed to someone (sales → team). */
     public function setupsHandedOut(): HasMany
     {

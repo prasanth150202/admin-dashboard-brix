@@ -64,12 +64,7 @@
                     </div>
                     <div>
                         <label for="assignee_id" class="block text-sm text-ink-2">Developer</label>
-                        <select id="assignee_id" name="assignee_id" class="field mt-1 w-full">
-                            <option value="">Unassigned</option>
-                            @foreach ($developers as $user)
-                                <option value="{{ $user->id }}" @selected($feature->assignee_id === $user->id)>{{ $user->name }}{{ $user->team === 'development' ? '' : ' · admin' }}</option>
-                            @endforeach
-                        </select>
+                        <x-person-select id="assignee_id" :users="$users" :selected="$feature->assignee_id" first="development" class="mt-1 w-full" />
                     </div>
                     <div>
                         <label for="priority" class="block text-sm text-ink-2">Priority</label>
@@ -100,6 +95,23 @@
                     </dl>
                     <p class="pt-2 text-xs text-muted">Only the development team changes the status.</p>
                 </section>
+                @can('assign-features')
+                    <form method="POST" action="{{ route('plan.assign') }}" class="card space-y-3 p-4">
+                        @csrf
+                        <input type="hidden" name="type" value="feature">
+                        <input type="hidden" name="id" value="{{ $feature->id }}">
+                        <h2 class="font-semibold">Assign</h2>
+                        <div>
+                            <label for="plan_assignee" class="block text-sm text-ink-2">Developer</label>
+                            <x-person-select id="plan_assignee" :users="$users" :selected="$feature->assignee_id" first="development" class="mt-1 w-full" />
+                        </div>
+                        <div>
+                            <label for="plan_due" class="block text-sm text-ink-2">Wanted by</label>
+                            <input id="plan_due" name="due_on" type="date" value="{{ $feature->due_on?->toDateString() }}" class="field mt-1 w-full">
+                        </div>
+                        <button class="btn">Save</button>
+                    </form>
+                @endcan
             @endcan
 
             @can('admin')

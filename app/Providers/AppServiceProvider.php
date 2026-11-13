@@ -19,5 +19,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('admin', fn (User $user) => $user->isAdmin());
         Gate::define('request-features', fn (User $user) => $user->canRequestFeatures());
         Gate::define('develop', fn (User $user) => $user->isDeveloper());
+        Gate::define('assign-features', fn (User $user) => $user->isDeveloper() || $user->canRequestFeatures());
     }
 }

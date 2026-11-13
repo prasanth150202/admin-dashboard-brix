@@ -45,7 +45,7 @@ class FeatureRequestsController extends Controller
             'filters' => $filters + ['status' => $status],
             'counts' => FeatureRequest::query()->select('status', DB::raw('count(*) as n'))->groupBy('status')->pluck('n', 'status'),
             'apps' => PartnerApp::orderBy('name')->get(),
-            'developers' => $this->developers(),
+            'users' => User::orderBy('name')->get(),
         ]);
     }
 
@@ -53,6 +53,7 @@ class FeatureRequestsController extends Controller
     {
         return view('features.create', [
             'apps' => PartnerApp::orderBy('name')->get(),
+            'users' => User::orderBy('name')->get(),
             'domains' => Shop::orderBy('myshopify_domain')->limit(1000)->pluck('myshopify_domain'),
         ]);
     }
@@ -65,6 +66,7 @@ class FeatureRequestsController extends Controller
             'priority' => ['required', Rule::in(array_keys(FeatureRequest::PRIORITIES))],
             'partner_app_id' => ['nullable', 'integer', 'exists:partner_apps,id'],
             'shop_domain' => ['nullable', 'string', 'max:190'],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
             'due_on' => ['nullable', 'date'],
         ]);
 
@@ -73,6 +75,10 @@ class FeatureRequestsController extends Controller
             'shop_id' => $this->resolveShop($data['shop_domain'] ?? null)?->id,
             'requested_by' => $request->user()->id,
         ]);
+
+        if ($feature->assignee_id) {
+            $feature->logAssignment($request->user());
+        }
 
         return redirect()->route('features.show', $feature)->with('status', "Requested {$feature->number()}. The development team will pick it up.");
     }
@@ -99,7 +105,7 @@ class FeatureRequestsController extends Controller
 
         return view('features.show', [
             'feature' => $feature,
-            'developers' => $this->developers(),
+            'users' => User::orderBy('name')->get(),
         ]);
     }
 
@@ -115,13 +121,15 @@ class FeatureRequestsController extends Controller
         ]);
 
         $from = $feature->status;
+        $assignee = isset($data['assignee_id']) ? (int) $data['assignee_id'] : null;
+        $reassigned = $assignee !== $feature->assignee_id;
         $closed = in_array($data['status'], FeatureRequest::CLOSED, true);
 
-        DB::transaction(function () use ($feature, $data, $from, $closed, $request) {
+        DB::transaction(function () use ($feature, $data, $from, $assignee, $reassigned, $closed, $request) {
             $feature->fill([
                 'status' => $data['status'],
                 'priority' => $data['priority'],
-                'assignee_id' => $data['assignee_id'] ?? null,
+                'assignee_id' => $assignee,
                 'due_on' => $data['due_on'] ?? null,
                 'completed_at' => $closed ? ($feature->completed_at ?? now()) : null,
             ])->save();
@@ -133,6 +141,10 @@ class FeatureRequestsController extends Controller
                     'to_status' => $from !== $data['status'] ? $data['status'] : null,
                     'body' => $data['note'] ?? null,
                 ]);
+            }
+
+            if ($reassigned) {
+                $feature->logAssignment($request->user());
             }
         });
 
@@ -157,14 +169,5 @@ class FeatureRequestsController extends Controller
         $feature->delete();
 
         return redirect()->route('features.index')->with('status', "Deleted {$feature->number()}.");
-    }
-
-    /** The development team first, then admins, for the assignee picker. */
-    private function developers()
-    {
-        return User::where('team', 'development')->orWhere('role', 'admin')
-            ->orderByRaw("CASE WHEN team = 'development' THEN 0 ELSE 1 END")
-            ->orderBy('name')
-            ->get();
     }
 }

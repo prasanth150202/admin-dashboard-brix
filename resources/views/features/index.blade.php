@@ -34,7 +34,7 @@
             <option value="me" @selected(($filters['assignee'] ?? '') === 'me')>Assigned to me</option>
             <option value="mine" @selected(($filters['assignee'] ?? '') === 'mine')>Requested by me</option>
             <option value="none" @selected(($filters['assignee'] ?? '') === 'none')>Unassigned</option>
-            @foreach ($developers as $user)
+            @foreach ($users as $user)
                 <option value="{{ $user->id }}" @selected(($filters['assignee'] ?? '') == $user->id)>{{ $user->name }}</option>
             @endforeach
         </select>

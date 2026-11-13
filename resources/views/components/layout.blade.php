@@ -16,6 +16,7 @@
         ['tickets.index', 'Tickets', 'tickets.*', \App\Models\Ticket::where('status', 'open')->count()],
         ['setups.index', 'Setups', 'setups.*', \App\Models\Setup::active()->count()],
         ['features.index', 'Features', 'features.*', \App\Models\FeatureRequest::active()->count()],
+        ['plan.index', 'Plan', 'plan.*', \App\Models\Setup::active()->whereNull('assignee_id')->count() + \App\Models\FeatureRequest::active()->whereNull('assignee_id')->count()],
         ['stores.index', 'Stores', 'stores.*', null],
         $admin ? ['apps.index', 'Apps', 'apps.*', null] : null,
         $admin ? ['payouts.index', 'Payouts', 'payouts.*', null] : null,

@@ -58,6 +58,15 @@ class FeatureRequest extends Model
         return $this->hasMany(FeatureRequestUpdate::class)->orderBy('id');
     }
 
+    /** Notes the current assignee in the history, so the requester sees who picked it up. */
+    public function logAssignment(?User $by): void
+    {
+        $this->updates()->create([
+            'user_id' => $by?->id,
+            'body' => $this->assignee_id ? 'Assigned to '.User::find($this->assignee_id)?->name.'.' : 'Unassigned.',
+        ]);
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->whereNotIn('status', self::CLOSED);
